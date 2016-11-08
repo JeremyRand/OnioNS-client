@@ -16,7 +16,7 @@ def main():
   print 'Opening log file, further output will be there.'
 
   # redirect output to file, https://stackoverflow.com/questions/7152762
-  f = file('TorBrowser/OnioNS/stem.log', 'w')
+  f = file('OnioNS-Namecoin-stem.log', 'w')
   sys.stdout = f
 
   # get current time of day
