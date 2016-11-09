@@ -43,9 +43,9 @@ def main():
     sys.exit("[err] The Tor Browser is not running. Cannot continue")
 
   controller.authenticate()
-  controller.set_options({
-    '__LeaveStreamsUnattached': '1'
-  })
+
+  if controller.get_conf('__LeaveStreamsUnattached') != '1':
+    sys.exit('[err] torrc is unsafe for name lookups.  Try adding the line "__LeaveStreamsUnattached 1" to torrc-defaults')
 
   print '[%d:%d | notice] Successfully connected to the Tor Browser.' % (now.minute, now.second)
   sys.stdout.flush()
