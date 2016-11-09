@@ -43,7 +43,10 @@ def main():
   sys.stdout.flush()
 
   try:
-    time.sleep(60 * 60 * 24 * 365) #basically, wait indefinitely
+    # Sleeping for 365 days, as upstream OnioNS does, appears to be incompatible with Windows.
+    # Therefore, we instead sleep for 1 day inside an infinite loop.
+    while True:
+      time.sleep(60 * 60 * 24 * 1) #basically, wait indefinitely
   except KeyboardInterrupt:
     print ''
 
