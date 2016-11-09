@@ -54,6 +54,11 @@ def main():
 
 # handle a stream event
 def handle_event(controller, stream):
+  # Not all stream events need to be attached.
+  # TODO: check with Tor Project whether NEW and NEWRESOLVE are the correct list.
+  if stream.status not in [stem.StreamStatus.NEW, stem.StreamStatus.NEWRESOLVE]:
+    return
+
   p = re.compile('.*\.tor$', re.IGNORECASE)
   if p.match(stream.target_address) is not None: # if .tor, send to OnioNS
     t = Thread(target=resolveOnioNS, args=[controller, stream])
