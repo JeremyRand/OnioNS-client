@@ -5,6 +5,8 @@ from stem.control import EventType, Controller
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 import json
 
+import validators
+
 import errno # https://stackoverflow.com/questions/14425401/
 from socket import error as socket_error
 
@@ -96,25 +98,45 @@ def resolveNamecoin(controller, stream):
   # send to Namecoin and wait for resolution
 
   try:
+    if not validators.domain.domain(stream.target_address):
+      raise Exception("Invalid target address from Tor controller")
+
     # TODO: use ncdns rather than namecoind
     name = "d/" + stream.target_address[:-4]
     name_data = rpc_connection.name_show(name)
     name_value = name_data["value"]
     name_value_parsed = json.loads(name_value)
-    name_tor = name_value_parsed["tor"]
-    name_ip4 = name_value_parsed["ip"]
-    name_ip6 = name_value_parsed["ip6"]
-    name_alias = name_value_parsed["alias"]
+
+    name_tor = None
+    name_ip4 = None
+    name_ip6 = None
+    name_alias = None
+
+    if "tor" in name_value_parsed:
+      name_tor = name_value_parsed["tor"]
+    if "ip" in name_value_parsed:
+      name_ip4 = name_value_parsed["ip"]
+    if "ip6" in name_value_parsed:
+      name_ip6 = name_value_parsed["ip6"]
+    if "alias" in name_value_parsed:
+      name_alias = name_value_parsed["alias"]
+
+    if isinstance(name_tor, basestring):
+      name_tor = [name_tor]
+    if isinstance(name_ip4, basestring):
+      name_ip4 = [name_ip4]
+    if isinstance(name_ip6, basestring):
+      name_ip6 = [name_ip6]
 
     # Don't do load balancing due to uncertain fingerprinting risk, only choose first Tor/IPv6/IPv4 address
-    if len(name_tor) > 0:
+    if len(name_tor) > 0 and isinstance(name_tor[0], basestring) and validators.domain.domain(name_tor[0]) and name_tor[0].endswith(".onion"):
       dest = name_tor[0]
-    elif len(name_ip6) > 0:
+    elif len(name_ip6) > 0 and isinstance(name_ip6[0], basestring) and validators.ip_address.ipv6(name_ip6[0]):
       dest = name_ip6[0]
-    elif len(name_ip4) > 0:
+    elif len(name_ip4) > 0 and isinstance(name_ip4[0], basestring) and validators.ip_address.ipv4(name_ip4[0]):
       dest = name_ip4[0]
     # Alias doesn't return a list, it returns a single string that ends with a period (or None if no alias exists).
-    elif name_alias is not None:
+    elif isinstance(name_alias, basestring) and name_alias.endswith(".") and validators.domain.domain(name_alias[:-1]):
       dest = name_alias[:-1]
 
   except JSONRPCException as err:
