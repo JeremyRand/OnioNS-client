@@ -98,7 +98,7 @@ def resolveNamecoin(controller, stream):
   # send to Namecoin and wait for resolution
 
   try:
-    if not validators.domain.domain(stream.target_address):
+    if not validators.domain(stream.target_address):
       raise Exception("Invalid target address from Tor controller")
 
     bit_domain = stream.target_address
@@ -139,14 +139,14 @@ def resolveNamecoin(controller, stream):
       name_ip6 = [name_ip6]
 
     # Don't do load balancing due to uncertain fingerprinting risk, only choose first Tor/IPv6/IPv4 address
-    if len(name_tor) > 0 and isinstance(name_tor[0], basestring) and validators.domain.domain(name_tor[0]) and name_tor[0].endswith(".onion"):
+    if len(name_tor) > 0 and isinstance(name_tor[0], basestring) and validators.domain(name_tor[0]) and name_tor[0].endswith(".onion"):
       dest = name_tor[0]
     elif not onion_only and len(name_ip6) > 0 and isinstance(name_ip6[0], basestring) and validators.ip_address.ipv6(name_ip6[0]):
       dest = name_ip6[0]
     elif not onion_only and len(name_ip4) > 0 and isinstance(name_ip4[0], basestring) and validators.ip_address.ipv4(name_ip4[0]):
       dest = name_ip4[0]
     # Alias doesn't return a list, it returns a single string that ends with a period (or None if no alias exists).
-    elif not onion_only and isinstance(name_alias, basestring) and name_alias.endswith(".") and validators.domain.domain(name_alias[:-1]):
+    elif not onion_only and isinstance(name_alias, basestring) and name_alias.endswith(".") and validators.domain(name_alias[:-1]):
       dest = name_alias[:-1]
 
   except JSONRPCException as err:
