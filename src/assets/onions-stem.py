@@ -1,3 +1,7 @@
+# Before running, do this:
+# sudo pip2 install stem python-bitcoinrpc validators
+
+# Also make sure to set your namecoind login info in the init_namecoind function.
 
 import stem, stem.connection, stem.socket
 from stem.control import EventType, Controller
@@ -6,6 +10,8 @@ from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 import json
 
 import validators
+
+import traceback
 
 import errno # https://stackoverflow.com/questions/14425401/
 from socket import error as socket_error
@@ -17,16 +23,8 @@ import time, datetime
 
 rpc_connection = None
 
-# start of application
-def main():
-
+def init_namecoind():
   global rpc_connection
-
-  print 'Opening log file, further output will be there.'
-
-  # redirect output to file, https://stackoverflow.com/questions/7152762
-  f = file('OnioNS-Namecoin-stem.log', 'w')
-  sys.stdout = f
 
   # rpc_user and rpc_password are set in the namecoin.conf file
   # TODO: read the login data from config file
@@ -34,6 +32,17 @@ def main():
   rpc_user = "user"
   rpc_password = "pass"
   rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:8336"%(rpc_user, rpc_password))
+
+# start of application
+def main():
+
+  print 'Opening log file, further output will be there.'
+
+  # redirect output to file, https://stackoverflow.com/questions/7152762
+  f = file('OnioNS-Namecoin-stem.log', 'w')
+  sys.stdout = f
+
+  init_namecoind()
 
   # get current time of day
   now = datetime.datetime.now()
@@ -65,8 +74,6 @@ def main():
       time.sleep(60 * 60 * 24 * 1) #basically, wait indefinitely
   except KeyboardInterrupt:
     print ''
-
-
 
 # handle a stream event
 def handle_event(controller, stream):
@@ -113,13 +120,21 @@ def resolveNamecoin(controller, stream):
 
     # TODO: use ncdns rather than namecoind
     name = "d/" + bit_domain[:-4]
-    name_data = rpc_connection.name_show(name)
+
+    try:
+      name_data = rpc_connection.name_show(name)
+    except:
+      print '[%d:%d | warn  ] Namecoin error contacting RPC' % (now.minute, now.second)
+      print '[%d:%d | warn  ] Namecoin re-initializing RPC...' % (now.minute, now.second)
+      init_namecoind()
+      name_data = rpc_connection.name_show(name)
+
     name_value = name_data["value"]
     name_value_parsed = json.loads(name_value)
 
-    name_tor = None
-    name_ip4 = None
-    name_ip6 = None
+    name_tor = []
+    name_ip4 = []
+    name_ip6 = []
     name_alias = None
 
     if "tor" in name_value_parsed:
@@ -160,7 +175,8 @@ def resolveNamecoin(controller, stream):
     print '[%d:%d | warn  ] Namecoin value missing an expected field:' % (now.minute, now.second), err
   except Exception as err:
     now = datetime.datetime.now()
-    print '[%d:%d | warn  ] Namecoin unexpected error:' % (now.minute, now.second), err
+    print '[%d:%d | warn  ] Namecoin unexpected error:' % (now.minute, now.second)
+    traceback.print_exc(file=sys.stdout)
 
   if dest is None:
     sys.stdout.flush()
